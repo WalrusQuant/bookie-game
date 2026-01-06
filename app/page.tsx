@@ -22,6 +22,13 @@ export default function Home() {
     router.push('/game');
   };
 
+  const handleClearGame = () => {
+    if (confirm('Are you sure you want to delete your saved game? This cannot be undone.')) {
+      localStorage.removeItem('bookie-game-state');
+      setShowContinue(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
       <div className="max-w-2xl w-full text-center">
@@ -63,6 +70,15 @@ export default function Home() {
           >
             NEW GAME
           </button>
+
+          {showContinue && (
+            <button
+              onClick={handleClearGame}
+              className="px-8 py-2 text-neutral-500 hover:text-red-500 text-sm transition-colors"
+            >
+              Delete Saved Game
+            </button>
+          )}
         </div>
 
         <div className="mt-16 text-neutral-500 text-xs">

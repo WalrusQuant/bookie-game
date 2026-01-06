@@ -23,31 +23,15 @@ export default function NewsPanel() {
   // Sort by day (most recent first)
   revealedNews.sort((a, b) => b.news.day - a.news.day);
 
-  if (revealedNews.length === 0) {
-    return (
-      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-        <h2 className="text-lg font-bold mb-2 flex items-center gap-2">
-          <span className="text-yellow-500">NEWS</span>
-        </h2>
-        <p className="text-neutral-500 text-sm">
-          {day === 1
-            ? 'Check back later for injury reports and game updates.'
-            : 'No news yet this week.'}
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-      <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-        <span className="text-yellow-500">NEWS</span>
-        <span className="text-xs text-neutral-500 font-normal">
-          ({revealedNews.length} update{revealedNews.length !== 1 ? 's' : ''})
+    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-2 h-28 lg:h-60">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-yellow-500 text-xs font-bold">NEWS</span>
+        <span className="text-[10px] text-neutral-500">
+          {revealedNews.length > 0 ? `(${revealedNews.length})` : (day === 1 ? 'Check back later' : 'No news')}
         </span>
-      </h2>
-
-      <div className="space-y-3 max-h-64 overflow-y-auto">
+      </div>
+      <div className="space-y-1 h-16 lg:h-48 overflow-y-auto">
         {revealedNews.map(({ news, game }, index) => (
           <NewsItem key={`${game.id}-${news.teamId}-${news.day}-${news.type}-${index}`} news={news} game={game} />
         ))}
@@ -82,22 +66,22 @@ function NewsItem({ news, game }: { news: TeamNews; game: Game }) {
   const isNegative = impactOnTeam < 0;
 
   return (
-    <div className="border-l-2 border-neutral-700 pl-3 py-1">
-      <div className="flex items-center gap-2 text-xs mb-1">
+    <div className="border-l-2 border-neutral-700 pl-2 py-0.5">
+      <div className="flex items-center gap-1.5 text-[10px] mb-0.5">
         <span className={`font-bold ${typeColors[news.type]}`}>
           {typeIcons[news.type]}
         </span>
-        <span className="text-neutral-500">Day {news.day}</span>
+        <span className="text-neutral-500">D{news.day}</span>
         <span className="text-neutral-600">|</span>
-        <span className="text-neutral-400">{team.city} {team.name}</span>
+        <span className="text-neutral-400">{team.city}</span>
       </div>
-      <p className="text-sm">{news.headline}</p>
-      <div className="flex items-center gap-2 mt-1 text-xs">
+      <p className="text-xs leading-snug">{news.headline}</p>
+      <div className="flex items-center gap-1.5 mt-0.5 text-[10px]">
         <span className={isPositive ? 'text-green-500' : isNegative ? 'text-red-500' : 'text-neutral-500'}>
-          Line impact: {impactOnTeam > 0 ? '+' : ''}{impactOnTeam} pts
+          {impactOnTeam > 0 ? '+' : ''}{impactOnTeam} pts
         </span>
         {Math.abs(impactOnTeam) >= 2 && (
-          <span className="text-orange-500">SIGNIFICANT</span>
+          <span className="text-orange-500">BIG</span>
         )}
       </div>
     </div>

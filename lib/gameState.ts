@@ -75,10 +75,13 @@ function createInitialState(): GameState {
         type: 'info',
       },
     ],
-    availableMissions: generateDailyMissions([], customers, 0, 1),
+    availableMissions: generateDailyMissions([], customers, 0, 1, games, [], STARTING_BANKROLL, false),
     actionsToday: 0,
     betsReceivedToday: false,
     isGameOver: false,
+    hasScoutedThisWeek: false,
+    hedgedGames: [],
+    fixedGames: [],
   };
 }
 
@@ -185,6 +188,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       let newCustomers = state.customers;
       let newDebts = state.debts;
+      let newGames = state.games;
+      let newHasScoutedThisWeek = state.hasScoutedThisWeek;
+      let newHedgedGames = [...state.hedgedGames];
+      let newFixedGames = [...state.fixedGames];
 
       if (result.success && mission.reward.newCustomer) {
         const newCustomer = generateCustomer(mission.reward.newCustomer);
@@ -194,6 +201,38 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       if (result.success && result.debtCollected) {
         newDebts = state.debts.filter((d) => d.customerId !== result.debtCollected);
+      }
+
+      // Handle hedge mission - mark game as hedged
+      if (result.success && mission.type === 'hedge' && mission.reward.hedgeGameId) {
+        newHedgedGames.push(mission.reward.hedgeGameId);
+      }
+
+      // Handle scout mission - reveal market lines for all games
+      if (result.success && mission.type === 'scout' && mission.reward.revealMarketLines) {
+        newHasScoutedThisWeek = true;
+        // Market lines are already visible via hasScoutedThisWeek flag
+      }
+
+      // Handle schmooze mission - improve customer reliability and bet size
+      if (result.success && mission.type === 'schmooze' && mission.reward.improveCustomerId) {
+        const targetId = mission.reward.improveCustomerId;
+        newCustomers = state.customers.map((c) => {
+          if (c.id !== targetId) return c;
+          return {
+            ...c,
+            reliability: Math.min(1, c.reliability + 0.1),
+            maxBet: Math.round(c.maxBet * 1.25), // 25% increase
+          };
+        });
+      }
+
+      // Handle fix game mission - add to fixed games list
+      if (result.success && mission.type === 'fix_game' && mission.reward.fixGameId && mission.reward.fixedOutcome) {
+        newFixedGames.push({
+          gameId: mission.reward.fixGameId,
+          outcome: mission.reward.fixedOutcome,
+        });
       }
 
       const newBankroll = state.bankroll + result.moneyChange;
@@ -218,6 +257,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         energy: newEnergy,
         customers: newCustomers,
         debts: newDebts,
+        games: newGames,
+        hasScoutedThisWeek: newHasScoutedThisWeek,
+        hedgedGames: newHedgedGames,
+        fixedGames: newFixedGames,
         actionsToday: state.actionsToday + 1,
         availableMissions: state.availableMissions.filter((m) => m.id !== missionId),
         log: [
@@ -315,16 +358,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         // End of week - start new week
         const nextWeek = state.week + 1;
         const newGames = createWeekGames(state.teams, nextWeek);
+        const allGames = [...state.games, ...newGames];
 
         let newState: GameState = {
           ...state,
           week: nextWeek,
           day: 1,
           energy: MAX_ENERGY, // Reset to full energy at start of week
-          games: [...state.games, ...newGames],
-          availableMissions: generateDailyMissions(state.debts, state.customers, state.heat, 1),
+          games: allGames,
+          availableMissions: generateDailyMissions(state.debts, state.customers, state.heat, 1, allGames, [], state.bankroll, false),
           actionsToday: 0,
           betsReceivedToday: false,
+          hasScoutedThisWeek: false, // Reset scouting for new week
+          hedgedGames: [], // Reset hedged games
+          fixedGames: [], // Reset fixed games
           log: [
             ...state.log,
             {
@@ -342,15 +389,24 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         return newState;
       }
 
-      // Normal day transition - add 4 energy (capped at max) and reduce heat by 20%
+      // Normal day transition - add 4 energy (capped at max) and reduce heat by 10%
       const restEnergy = Math.min(state.maxEnergy, state.energy + 4);
-      const reducedHeat = Math.max(0, state.heat - 20);
+      const reducedHeat = Math.max(0, state.heat - 10);
       let newState: GameState = {
         ...state,
         day: nextDay,
         energy: restEnergy,
         heat: reducedHeat,
-        availableMissions: generateDailyMissions(state.debts, state.customers, state.heat, nextDay),
+        availableMissions: generateDailyMissions(
+          state.debts,
+          state.customers,
+          reducedHeat,
+          nextDay,
+          state.games,
+          state.bets,
+          state.bankroll,
+          state.hasScoutedThisWeek
+        ),
         actionsToday: 0,
         betsReceivedToday: false,
         log: [
@@ -383,7 +439,29 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const updatedGames = state.games.map((game) => {
         if (game.isComplete || game.week !== state.week) return game;
 
-        const { homeScore, awayScore } = simulateGame(game.homeTeam, game.awayTeam);
+        // Check if this game is fixed
+        const fixedGame = state.fixedGames.find((fg) => fg.gameId === game.id);
+
+        let homeScore: number;
+        let awayScore: number;
+
+        if (fixedGame) {
+          // Fixed game - force the outcome
+          if (fixedGame.outcome === 'home') {
+            // Home team wins by a margin that covers any spread
+            homeScore = 28 + Math.floor(Math.random() * 14);
+            awayScore = homeScore - 10 - Math.floor(Math.random() * 10);
+          } else {
+            // Away team wins
+            awayScore = 28 + Math.floor(Math.random() * 14);
+            homeScore = awayScore - 10 - Math.floor(Math.random() * 10);
+          }
+        } else {
+          // Normal simulation
+          const result = simulateGame(game.homeTeam, game.awayTeam);
+          homeScore = result.homeScore;
+          awayScore = result.awayScore;
+        }
 
         updatedTeams = updateTeamRecords(
           updatedTeams,
@@ -401,12 +479,19 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         };
       });
 
-      // Resolve bets
-      let weeklyPnL = 0;
+      // Resolve bets with detailed tracking
       const resolvedBets: Bet[] = [];
       let newDebts: Debt[] = [...state.debts];
       const logEntries: typeof state.log = [];
       const potentialNonPayers: { customerId: string; customerName: string; amount: number }[] = [];
+
+      // Analytics tracking
+      let totalBetCount = 0;
+      let customerWins = 0;      // Count of bets customers won
+      let customerLosses = 0;    // Count of bets customers lost
+      let moneyOut = 0;          // What we paid to winning customers
+      let moneyIn = 0;           // What losing customers paid us
+      let unpaidDebts = 0;       // Money owed but not paid
 
       for (const game of updatedGames.filter((g) => g.week === state.week && g.isComplete)) {
         const gameBets = state.bets.filter(
@@ -415,15 +500,18 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         const resolved = resolveBets(game, gameBets);
 
         for (const bet of resolved) {
+          totalBetCount++;
           const payout = calculatePayout(bet, JUICE);
           const customer = state.customers.find((c) => c.id === bet.customerId);
 
           if (bet.isWin) {
             // Customer won - we pay them
-            weeklyPnL -= Math.round(payout);
+            customerWins++;
+            const payoutAmount = Math.round(payout);
+            moneyOut += payoutAmount;
           } else if (bet.isWin === false) {
             // Customer lost - check if they pay (most do)
-            // Only ~25% chance of non-payment based on reliability
+            customerLosses++;
             const willTryToSkip = customer && Math.random() > customer.reliability;
 
             if (willTryToSkip && newDebts.length < 4) {
@@ -433,9 +521,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                 customerName: customer?.name || 'Unknown',
                 amount: bet.amount,
               });
+              unpaidDebts += bet.amount;
             } else {
               // They pay up (or we're at max debts - write off the rest)
-              weeklyPnL += bet.amount;
+              moneyIn += bet.amount;
             }
           }
 
@@ -481,13 +570,52 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         }
       }
 
+      const weeklyPnL = moneyIn - moneyOut;
       const newBankroll = state.bankroll + weeklyPnL;
 
+      // Add detailed weekly summary to log
       logEntries.push({
         id: generateId(),
         week: state.week,
         day: state.day,
-        message: `Week ${state.week} P&L: ${weeklyPnL >= 0 ? '+' : ''}$${weeklyPnL.toLocaleString()}`,
+        message: `--- WEEK ${state.week} SUMMARY ---`,
+        type: 'info',
+      });
+      logEntries.push({
+        id: generateId(),
+        week: state.week,
+        day: state.day,
+        message: `Bets: ${totalBetCount} total (${customerWins} wins, ${customerLosses} losses)`,
+        type: 'info',
+      });
+      logEntries.push({
+        id: generateId(),
+        week: state.week,
+        day: state.day,
+        message: `Money IN: +$${moneyIn.toLocaleString()} (from ${customerLosses} losing bets)`,
+        type: 'win',
+      });
+      logEntries.push({
+        id: generateId(),
+        week: state.week,
+        day: state.day,
+        message: `Money OUT: -$${moneyOut.toLocaleString()} (paid to ${customerWins} winners)`,
+        type: 'loss',
+      });
+      if (unpaidDebts > 0) {
+        logEntries.push({
+          id: generateId(),
+          week: state.week,
+          day: state.day,
+          message: `Unpaid: $${unpaidDebts.toLocaleString()} (${potentialNonPayers.length} deadbeats)`,
+          type: 'danger',
+        });
+      }
+      logEntries.push({
+        id: generateId(),
+        week: state.week,
+        day: state.day,
+        message: `NET P&L: ${weeklyPnL >= 0 ? '+' : ''}$${weeklyPnL.toLocaleString()}`,
         type: weeklyPnL >= 0 ? 'win' : 'loss',
       });
 

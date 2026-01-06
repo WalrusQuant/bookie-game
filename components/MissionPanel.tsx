@@ -17,9 +17,9 @@ export default function MissionPanel() {
 
   if (activeMissions.length === 0) {
     return (
-      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-        <h2 className="text-lg font-bold mb-2">Missions</h2>
-        <p className="text-neutral-500 text-sm">No missions available right now.</p>
+      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3">
+        <h2 className="text-sm font-bold mb-1">Missions</h2>
+        <p className="text-neutral-500 text-sm">No missions available.</p>
       </div>
     );
   }
@@ -29,24 +29,18 @@ export default function MissionPanel() {
   };
 
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold">Missions</h2>
-        <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-1">
-            <span className="text-yellow-500">ENERGY</span>
-            <span className="font-mono">{energy}/{state.maxEnergy}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className={heat > 60 ? 'text-red-500' : heat > 30 ? 'text-orange-500' : 'text-blue-500'}>
-              HEAT
-            </span>
-            <span className="font-mono">{heat}%</span>
-          </div>
+    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-2 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-1.5 shrink-0">
+        <h2 className="text-xs font-bold">Missions</h2>
+        <div className="flex items-center gap-2 text-[10px]">
+          <span className="text-yellow-500">{energy}/{state.maxEnergy} EN</span>
+          <span className={heat > 60 ? 'text-red-500' : heat > 30 ? 'text-orange-500' : 'text-blue-500'}>
+            {heat}% HT
+          </span>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-1 flex-1 min-h-0 overflow-y-auto">
         {activeMissions.map((mission) => (
           <MissionCard
             key={mission.id}
@@ -77,6 +71,10 @@ function MissionCard({
     recruit: 'text-blue-500 border-blue-800',
     avoid_heat: 'text-orange-500 border-orange-800',
     rest: 'text-purple-500 border-purple-800',
+    hedge: 'text-cyan-500 border-cyan-800',
+    scout: 'text-indigo-500 border-indigo-800',
+    schmooze: 'text-pink-500 border-pink-800',
+    fix_game: 'text-red-500 border-red-800',
   };
 
   const typeLabels: Record<string, string> = {
@@ -84,54 +82,44 @@ function MissionCard({
     recruit: 'RECRUIT',
     avoid_heat: 'LAY LOW',
     rest: 'REST',
+    hedge: 'HEDGE',
+    scout: 'SCOUT',
+    schmooze: 'SCHMOOZE',
+    fix_game: 'FIX GAME',
   };
 
   return (
     <div
-      className={`border rounded-lg p-3 ${
+      className={`border rounded p-2 ${
         canAfford ? 'border-neutral-700 bg-neutral-800/50' : 'border-neutral-800 bg-neutral-900/50 opacity-60'
       }`}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-xs px-2 py-0.5 border rounded ${typeColors[mission.type]}`}>
-              {typeLabels[mission.type]}
-            </span>
-            <span className="text-neutral-500 text-xs">{mission.location}</span>
-          </div>
-          <h3 className="font-medium">{mission.title}</h3>
-          <p className="text-neutral-400 text-sm mt-1">{mission.description}</p>
+      <div className="flex items-center gap-2 mb-1">
+        <span className={`text-[10px] px-1 py-0.5 border rounded ${typeColors[mission.type]}`}>
+          {typeLabels[mission.type]}
+        </span>
+        <span className="text-neutral-500 text-[10px]">{mission.location}</span>
+      </div>
 
-          <div className="flex items-center gap-4 mt-2 text-xs">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-xs">{mission.title}</div>
+          <div className="flex flex-wrap items-center gap-1.5 text-[10px] mt-0.5">
             {mission.energyCost > 0 && (
-              <span className="text-yellow-500">
-                -{mission.energyCost} Energy
-              </span>
+              <span className="text-yellow-500">-{mission.energyCost} EN</span>
             )}
             {mission.moneyCost > 0 && (
-              <span className="text-red-500">
-                -${mission.moneyCost}
-              </span>
+              <span className="text-red-500">-${mission.moneyCost}</span>
             )}
             {mission.risk > 0 && (
-              <span className="text-orange-500">
-                {Math.round(mission.risk * 100)}% Risk
-              </span>
+              <span className="text-orange-500">{Math.round(mission.risk * 100)}% Risk</span>
             )}
             {mission.reward.money && (
-              <span className="text-green-500">
-                +${mission.reward.money}
-              </span>
+              <span className="text-green-500">+${mission.reward.money}</span>
             )}
             {mission.reward.heat && (
               <span className={mission.reward.heat < 0 ? 'text-blue-500' : 'text-red-500'}>
-                {mission.reward.heat > 0 ? '+' : ''}{mission.reward.heat} Heat
-              </span>
-            )}
-            {mission.reward.energy && (
-              <span className="text-purple-500">
-                +{mission.reward.energy} Energy
+                {mission.reward.heat > 0 ? '+' : ''}{mission.reward.heat} HT
               </span>
             )}
           </div>
@@ -140,9 +128,9 @@ function MissionCard({
         <button
           onClick={onExecute}
           disabled={!canAfford}
-          className={`ml-4 px-4 py-2 rounded text-sm font-medium transition-colors ${
+          className={`px-3 py-1 rounded text-xs font-bold shrink-0 transition-colors ${
             canAfford
-              ? 'bg-green-600 hover:bg-green-500 text-black'
+              ? 'bg-green-600 hover:bg-green-500 active:bg-green-400 text-black'
               : 'bg-neutral-700 text-neutral-500 cursor-not-allowed'
           }`}
         >

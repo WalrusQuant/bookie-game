@@ -26,13 +26,13 @@ export default function CustomerList() {
   };
 
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-      <h2 className="text-lg font-bold mb-4">
+    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-2 h-full flex flex-col">
+      <h2 className="text-xs font-bold mb-1 shrink-0">
         <span className="text-green-500">CUSTOMERS</span>
-        <span className="text-neutral-500 text-sm ml-2">({activeCustomers.length} active)</span>
+        <span className="text-neutral-500 text-[10px] ml-2">({activeCustomers.length})</span>
       </h2>
 
-      <div className="space-y-2 max-h-[940px] overflow-y-auto">
+      <div className="space-y-1 flex-1 min-h-0 overflow-y-auto">
         {activeCustomers.map((customer) => (
           <CustomerCard
             key={customer.id}
@@ -63,29 +63,28 @@ function CustomerCard({ customer, currentBets, totalPnL }: CustomerCardProps) {
   const weeklyAction = currentBets.reduce((sum, b) => sum + b.amount, 0);
 
   return (
-    <div className="bg-neutral-800 rounded p-3">
-      <div className="flex justify-between items-start">
+    <div className="bg-neutral-800 rounded p-1.5">
+      <div className="flex justify-between items-center">
         <div>
-          <div className="font-bold">{customer.name}</div>
-          <div className={`text-xs ${typeColors[customer.type]}`}>
+          <div className="text-xs font-bold">{customer.name}</div>
+          <div className={`text-[10px] ${typeColors[customer.type]}`}>
             {getCustomerTypeLabel(customer.type)}
           </div>
         </div>
-        <div className="text-right text-sm">
+        <div className="text-right text-[10px]">
           <div className="text-neutral-400">
-            Bankroll: ${customer.bankroll.toLocaleString()}
+            ${customer.bankroll.toLocaleString()}
           </div>
           <div className={totalPnL >= 0 ? 'text-red-400' : 'text-green-400'}>
-            {/* From bookie perspective: customer winning is bad */}
-            Your P&L: {totalPnL <= 0 ? '+' : ''}{(-totalPnL).toLocaleString()}
+            {totalPnL <= 0 ? '+' : ''}{(-totalPnL).toLocaleString()}
           </div>
         </div>
       </div>
 
       {currentBets.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-neutral-700">
-          <div className="text-xs text-neutral-500 mb-1">This week's action: ${weeklyAction.toLocaleString()}</div>
-          <div className="flex flex-wrap gap-1">
+        <div className="mt-1 pt-1 border-t border-neutral-700">
+          <div className="text-[10px] text-neutral-500">Wk: ${weeklyAction.toLocaleString()}</div>
+          <div className="flex flex-wrap gap-0.5 mt-0.5">
             {currentBets.map((bet) => (
               <BetChip key={bet.id} bet={bet} />
             ))}
@@ -109,12 +108,10 @@ function BetChip({ bet }: { bet: Bet }) {
     : 'bg-green-900 border-green-700';
 
   return (
-    <div className={`text-xs px-2 py-1 rounded ${resultColor} border border-neutral-600`}>
+    <div className={`text-[10px] px-1 py-0.5 rounded ${resultColor} border border-neutral-600`}>
       {team.city} ${bet.amount}
       {bet.isWin !== undefined && (
-        <span className="ml-1">
-          {bet.isWin ? '(L)' : '(W)'}
-        </span>
+        <span className="ml-0.5">{bet.isWin ? 'L' : 'W'}</span>
       )}
     </div>
   );

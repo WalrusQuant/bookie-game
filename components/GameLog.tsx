@@ -20,14 +20,14 @@ export default function GameLog() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 border-b border-neutral-800">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-green-500">Activity Log</h2>
+      <div className="p-2 border-b border-neutral-800">
+        <h2 className="text-xs font-bold uppercase tracking-wide text-green-500">Log</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 font-mono text-xs">
+      <div className="flex-1 overflow-y-auto p-2 space-y-1 font-mono text-xs">
         {recentLogs.map((entry) => (
-          <div key={entry.id} className={`${typeColors[entry.type]} leading-relaxed`}>
-            <span className="text-neutral-600 text-[10px]">[W{entry.week}D{entry.day}]</span>{' '}
+          <div key={entry.id} className={`${typeColors[entry.type]} leading-tight`}>
+            <span className="text-neutral-600">[{entry.week}.{entry.day}]</span>{' '}
             {entry.message}
           </div>
         ))}

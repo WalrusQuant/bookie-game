@@ -27,6 +27,31 @@ body {
   font-family: var(--font-mono);
 }
 
+/* iOS safe area support */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.h-safe-area-inset-bottom {
+  height: env(safe-area-inset-bottom);
+}
+
+/* Prevent pull-to-refresh on mobile */
+html {
+  overscroll-behavior: none;
+}
+
+/* Prevent text selection on game elements */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Touch-friendly tap highlight */
+button, a {
+  -webkit-tap-highlight-color: rgba(34, 197, 94, 0.2);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

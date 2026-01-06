@@ -23,9 +23,9 @@ export default function NonPayerPopup() {
   const canEnforce = energy >= 2;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-      <div className="bg-neutral-900 border border-red-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
-        <div className="text-center mb-6">
+    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-50">
+      <div className="bg-neutral-900 border border-red-800 rounded-t-2xl sm:rounded-lg p-5 sm:p-6 w-full sm:max-w-md sm:mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="text-center mb-5 sm:mb-6">
           <div className="text-red-500 text-4xl mb-2">!</div>
           <h2 className="text-xl font-bold text-red-500 mb-2">Problem Customer</h2>
           <p className="text-neutral-300">
@@ -37,7 +37,7 @@ export default function NonPayerPopup() {
         <div className="space-y-3">
           <button
             onClick={() => handleAction('let_slide')}
-            className="w-full p-4 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-lg text-left transition-colors"
+            className="w-full p-4 sm:p-4 bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 border border-neutral-700 rounded-lg text-left transition-colors"
           >
             <div className="font-bold text-green-400">Talk to them</div>
             <div className="text-sm text-neutral-400">
@@ -48,9 +48,9 @@ export default function NonPayerPopup() {
           <button
             onClick={() => handleAction('pressure')}
             disabled={!canPressure}
-            className={`w-full p-4 border rounded-lg text-left transition-colors ${
+            className={`w-full p-4 sm:p-4 border rounded-lg text-left transition-colors ${
               canPressure
-                ? 'bg-neutral-800 hover:bg-neutral-700 border-neutral-700'
+                ? 'bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 border-neutral-700'
                 : 'bg-neutral-900 border-neutral-800 opacity-50 cursor-not-allowed'
             }`}
           >
@@ -66,9 +66,9 @@ export default function NonPayerPopup() {
           <button
             onClick={() => handleAction('enforce')}
             disabled={!canEnforce}
-            className={`w-full p-4 border rounded-lg text-left transition-colors ${
+            className={`w-full p-4 sm:p-4 border rounded-lg text-left transition-colors ${
               canEnforce
-                ? 'bg-neutral-800 hover:bg-red-900/50 border-neutral-700'
+                ? 'bg-neutral-800 hover:bg-red-900/50 active:bg-red-900/70 border-neutral-700'
                 : 'bg-neutral-900 border-neutral-800 opacity-50 cursor-not-allowed'
             }`}
           >
@@ -83,7 +83,7 @@ export default function NonPayerPopup() {
 
           <button
             onClick={() => handleAction('cut_off')}
-            className="w-full p-4 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-lg text-left transition-colors"
+            className="w-full p-4 sm:p-4 bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 border border-neutral-700 rounded-lg text-left transition-colors"
           >
             <div className="font-bold text-neutral-400">Cut them off</div>
             <div className="text-sm text-neutral-500">
@@ -91,6 +91,9 @@ export default function NonPayerPopup() {
             </div>
           </button>
         </div>
+
+        {/* Safe area padding for iOS */}
+        <div className="h-safe-area-inset-bottom sm:hidden" />
       </div>
     </div>
   );

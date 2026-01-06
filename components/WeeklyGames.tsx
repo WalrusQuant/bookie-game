@@ -11,7 +11,7 @@ interface WeeklyGamesProps {
 
 export default function WeeklyGames({ canEdit }: WeeklyGamesProps) {
   const { state, dispatch } = useGame();
-  const { games, week, bets, day } = state;
+  const { games, week, bets, day, hasScoutedThisWeek, hedgedGames, fixedGames } = state;
 
   const currentGames = games.filter((g) => g.week === week);
 
@@ -36,16 +36,16 @@ export default function WeeklyGames({ canEdit }: WeeklyGamesProps) {
   };
 
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-2 h-full flex flex-col">
+      <h2 className="text-xs font-bold mb-1 flex items-center gap-2 shrink-0">
         <span className="text-green-500">WEEK {week}</span>
         <span className="text-neutral-500">GAMES</span>
         {canEdit && (
-          <span className="text-xs text-yellow-500 ml-auto">SET YOUR LINES</span>
+          <span className="text-[10px] text-yellow-500 ml-auto">SET LINES</span>
         )}
       </h2>
 
-      <div className="space-y-4">
+      <div className="space-y-1 flex-1 min-h-0 overflow-y-auto">
         {currentGames.map((game) => (
           <GameCard
             key={game.id}
@@ -53,6 +53,9 @@ export default function WeeklyGames({ canEdit }: WeeklyGamesProps) {
             canEdit={canEdit && !game.isComplete}
             onLineChange={handleLineChange}
             betInfo={day > 1 ? getGameBets(game.id) : undefined}
+            showMarketLine={hasScoutedThisWeek}
+            isHedged={hedgedGames.includes(game.id)}
+            isFixed={fixedGames.some((fg) => fg.gameId === game.id)}
           />
         ))}
       </div>
@@ -70,80 +73,78 @@ interface GameCardProps {
     homeCount: number;
     awayCount: number;
   };
+  showMarketLine: boolean;
+  isHedged: boolean;
+  isFixed: boolean;
 }
 
-function GameCard({ game, canEdit, onLineChange, betInfo }: GameCardProps) {
+function GameCard({ game, canEdit, onLineChange, betInfo, showMarketLine, isHedged, isFixed }: GameCardProps) {
   const homeFavored = game.yourLine < 0;
   const lineOff = Math.abs(game.yourLine - game.marketLine);
   const hasValue = lineOff > 1.5;
 
-  // Show market line hint when there's revealed news
+  // Show market line hint when scouted OR when there's revealed news
   const hasRevealedNews = game.news?.some((n) => n.isRevealed) ?? false;
+  const shouldShowMarketLine = showMarketLine || hasRevealedNews;
 
   return (
-    <div className={`bg-neutral-800 rounded-lg p-4 ${hasValue && canEdit ? 'border border-yellow-600' : ''}`}>
-      {/* Value warning */}
-      {hasValue && canEdit && (
-        <div className="text-yellow-500 text-xs mb-2">
-          Sharp money sees value! Your line is {lineOff.toFixed(1)} pts off market
+    <div className={`bg-neutral-800 rounded px-6 py-3 ${
+      isFixed ? 'border border-red-600' :
+      isHedged ? 'border border-cyan-600' :
+      hasValue && canEdit ? 'border border-yellow-600' : ''
+    }`}>
+      {/* Status indicators inline */}
+      {(isFixed || isHedged || (hasValue && canEdit && !isHedged && !isFixed)) && (
+        <div className="text-[10px] mb-0.5">
+          {isFixed && !game.isComplete && <span className="text-red-500 font-bold">FIX IS IN</span>}
+          {isHedged && !game.isComplete && !isFixed && <span className="text-cyan-500">HEDGED</span>}
+          {hasValue && canEdit && !isHedged && !isFixed && <span className="text-yellow-500">{lineOff.toFixed(1)} off mkt</span>}
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4 items-center">
+      <div className="grid grid-cols-3 gap-1 items-center">
         {/* Away Team */}
         <div className="text-right">
-          <div className={`text-sm ${!homeFavored ? 'text-green-500' : 'text-neutral-400'}`}>
+          <div className={`text-sm leading-tight ${!homeFavored ? 'text-green-500' : 'text-neutral-400'}`}>
             {getTeamFullName(game.awayTeam)}
           </div>
-          <div className="text-xs text-neutral-600">
-            ({game.awayTeam.record.wins}-{game.awayTeam.record.losses})
-          </div>
           {game.isComplete && (
-            <div className="text-2xl font-bold mt-1">{game.awayScore}</div>
-          )}
-          {betInfo && !game.isComplete && betInfo.awayCount > 0 && (
-            <div className="text-xs text-neutral-500 mt-1">
-              {betInfo.awayCount} bet{betInfo.awayCount !== 1 ? 's' : ''} · ${betInfo.awayAmount.toLocaleString()}
-            </div>
+            <div className="text-base font-bold">{game.awayScore}</div>
           )}
         </div>
 
         {/* Line / At */}
         <div className="text-center">
           {game.isComplete ? (
-            <div className="text-neutral-500 text-sm">FINAL</div>
+            <div className="text-neutral-500 text-[10px]">FINAL</div>
           ) : (
             <>
-              <div className="text-neutral-500 text-xs mb-1">@</div>
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-0.5">
                 {canEdit && (
                   <button
                     onClick={() => onLineChange(game.id, -0.5)}
-                    className="w-8 h-8 bg-neutral-700 hover:bg-neutral-600 rounded text-lg transition-colors"
+                    className="w-5 h-5 bg-neutral-700 hover:bg-neutral-600 active:bg-neutral-500 rounded text-xs transition-colors"
                   >
                     -
                   </button>
                 )}
-                <div className="w-16 text-center">
-                  <div className={`text-lg font-bold ${homeFavored ? 'text-green-500' : 'text-neutral-300'}`}>
+                <div className="w-10 text-center">
+                  <div className={`text-sm font-bold ${homeFavored ? 'text-green-500' : 'text-neutral-300'}`}>
                     {formatSpread(game.yourLine, 'home')}
                   </div>
-                  <div className="text-xs text-neutral-500">YOUR LINE</div>
                 </div>
                 {canEdit && (
                   <button
                     onClick={() => onLineChange(game.id, 0.5)}
-                    className="w-8 h-8 bg-neutral-700 hover:bg-neutral-600 rounded text-lg transition-colors"
+                    className="w-5 h-5 bg-neutral-700 hover:bg-neutral-600 active:bg-neutral-500 rounded text-xs transition-colors"
                   >
                     +
                   </button>
                 )}
               </div>
-
-              {/* Market line hint */}
-              {hasRevealedNews && (
-                <div className="text-xs text-neutral-500 mt-2">
-                  Market: {formatSpread(game.marketLine, 'home')}
+              {shouldShowMarketLine && (
+                <div className="text-[10px] text-neutral-500">
+                  Mkt: {formatSpread(game.marketLine, 'home')}
                 </div>
               )}
             </>
@@ -152,19 +153,11 @@ function GameCard({ game, canEdit, onLineChange, betInfo }: GameCardProps) {
 
         {/* Home Team */}
         <div className="text-left">
-          <div className={`text-sm ${homeFavored ? 'text-green-500' : 'text-neutral-400'}`}>
+          <div className={`text-sm leading-tight ${homeFavored ? 'text-green-500' : 'text-neutral-400'}`}>
             {getTeamFullName(game.homeTeam)}
           </div>
-          <div className="text-xs text-neutral-600">
-            ({game.homeTeam.record.wins}-{game.homeTeam.record.losses})
-          </div>
           {game.isComplete && (
-            <div className="text-2xl font-bold mt-1">{game.homeScore}</div>
-          )}
-          {betInfo && !game.isComplete && betInfo.homeCount > 0 && (
-            <div className="text-xs text-neutral-500 mt-1">
-              {betInfo.homeCount} bet{betInfo.homeCount !== 1 ? 's' : ''} · ${betInfo.homeAmount.toLocaleString()}
-            </div>
+            <div className="text-base font-bold">{game.homeScore}</div>
           )}
         </div>
       </div>
@@ -186,14 +179,14 @@ function ExposureBar({ homeAmount, awayAmount }: { homeAmount: number; awayAmoun
   const imbalancePercent = total > 0 ? (imbalance / total) * 100 : 0;
 
   return (
-    <div className="mt-3">
-      <div className="flex justify-between text-xs text-neutral-500 mb-1">
-        <span>Action balance</span>
+    <div className="mt-1.5">
+      <div className="flex justify-between text-[10px] text-neutral-500 mb-0.5">
+        <span>Balance</span>
         <span className={imbalancePercent > 30 ? 'text-yellow-500' : ''}>
-          {imbalancePercent > 30 ? `${imbalancePercent.toFixed(0)}% imbalanced` : 'Balanced'}
+          {imbalancePercent > 30 ? `${imbalancePercent.toFixed(0)}%` : 'OK'}
         </span>
       </div>
-      <div className="h-2 bg-neutral-700 rounded-full overflow-hidden flex">
+      <div className="h-1 bg-neutral-700 rounded-full overflow-hidden flex">
         <div
           className="h-full bg-red-600 transition-all duration-300"
           style={{ width: `${homePercent}%` }}
@@ -202,10 +195,6 @@ function ExposureBar({ homeAmount, awayAmount }: { homeAmount: number; awayAmoun
           className="h-full bg-blue-600 transition-all duration-300"
           style={{ width: `${100 - homePercent}%` }}
         />
-      </div>
-      <div className="flex justify-between text-xs text-neutral-600 mt-1">
-        <span>Home</span>
-        <span>Away</span>
       </div>
     </div>
   );

@@ -81,7 +81,7 @@ export interface GameLogEntry {
 }
 
 // Mission system
-export type MissionType = 'collect' | 'recruit' | 'avoid_heat' | 'rest';
+export type MissionType = 'collect' | 'recruit' | 'avoid_heat' | 'rest' | 'hedge' | 'scout' | 'schmooze' | 'fix_game';
 
 export interface Mission {
   id: string;
@@ -93,6 +93,8 @@ export interface Mission {
   moneyCost: number;
   risk: number; // 0-1, chance of bad outcome
   reward: MissionReward;
+  targetGameId?: string; // For hedge/fix missions
+  targetCustomerId?: string; // For schmooze missions
 }
 
 export interface MissionReward {
@@ -101,6 +103,11 @@ export interface MissionReward {
   debtCollected?: string; // customerId
   heat?: number; // negative = reduce heat
   energy?: number;
+  revealMarketLines?: boolean; // Scout mission reveals all market lines
+  hedgeGameId?: string; // Hedge mission - reduces exposure on this game
+  improveCustomerId?: string; // Schmooze - improve reliability/bet size
+  fixGameId?: string; // Fix game - guarantee outcome
+  fixedOutcome?: 'home' | 'away'; // Which side wins the fixed game
 }
 
 export interface NonPayerPopup {
@@ -129,6 +136,9 @@ export interface GameState {
   isGameOver: boolean;
   gameOverReason?: string;
   pendingNonPayer?: NonPayerPopup; // Popup when someone won't pay
+  hasScoutedThisWeek: boolean; // Track if player has scouted this week
+  hedgedGames: string[]; // Game IDs that have been hedged
+  fixedGames: { gameId: string; outcome: 'home' | 'away' }[]; // Fixed games
 }
 
 export type GameAction =
@@ -152,7 +162,7 @@ export type CollectionAction =
 
 // Constants
 export const STARTING_BANKROLL = 10000;
-export const STARTING_ENERGY = 3;
+export const STARTING_ENERGY = 6;
 export const MAX_ENERGY = 10;
 export const MIN_BET = 50;
 export const MAX_BET_MULTIPLIER = 0.1;
